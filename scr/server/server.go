@@ -94,27 +94,3 @@ func (srv *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Error(w, "Username and Password required", http.StatusBadRequest)
 }
-
-// func main() {
-// 	dbpool, err := New()
-// 	_, err = dbpool.Exec(context.Background(), `CREATE TABLE IF NOT EXISTS users(
-// 		ID serial primary key,
-// 		username text,
-// 		pass text
-// 	); CREATE TABLE IF NOT EXISTS chats(
-// 		ID serial primary key
-// 	); CREATE TABLE IF NOT EXISTS messages(
-// 		ID serial primary key,
-// 		from_id integer references users(ID),
-// 		chat_id integer references chats(ID),
-// 		content text,
-// 		timestamp timestamp
-// 	); CREATE TABLE IF NOT EXISTS user_chat(
-// 		user_id integer references users(ID),
-// 		chat_id integer references chats(ID)
-// 	)`)
-// 	if err != nil {
-// 		log.Print(err)
-// 	}
-
-// }
