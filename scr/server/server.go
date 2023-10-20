@@ -6,11 +6,13 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type userBody struct {
-	Usernama string `json:"username"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -32,12 +34,65 @@ func (srv *Server) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var userBody userBody
 	err := json.NewDecoder(r.Body).Decode(&userBody)
 	if err != nil {
+		log.Println("body is empty", err)
+		http.Error(w, "body is empty", http.StatusBadRequest)
 		return
 	}
-	_, err = srv.Pool.Exec(context.Background(), "INSERT INTO users (username, pass) VALUES ($1, $2)", userBody.Usernama, userBody.Password)
-	if err != nil {
-		log.Println(err)
+
+	if userBody.Password != "" && userBody.Username != "" {
+
+		hashPassword, err := bcrypt.GenerateFromPassword([]byte(userBody.Password), bcrypt.DefaultCost)
+		if err != nil {
+			log.Println("Something wrong w/ hashing password")
+		}
+
+		_, err = srv.Pool.Exec(context.Background(), "INSERT INTO users (username, pass) VALUES ($1, $2)", userBody.Username, hashPassword)
+		if err != nil {
+			log.Println(err)
+		}
+		w.Write([]byte("Success registarion"))
+		return
 	}
+	http.Error(w, "Username and Password required", http.StatusBadRequest)
+}
+
+func (srv *Server) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	type Row struct {
+		Id       int
+		Username string
+		Pass     string
+	}
+	var userBody userBody
+
+	err := json.NewDecoder(r.Body).Decode(&userBody)
+	if err != nil {
+		log.Println("body is empty", err)
+		http.Error(w, "body is empty", http.StatusBadRequest)
+		return
+	}
+	if userBody.Password != "" && userBody.Username != "" {
+		rows, err := srv.Pool.Query(context.Background(), "select * from users where username = $1", userBody.Username)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[Row])
+		if err != nil {
+			log.Println("Cant parse raw", err)
+			return
+		}
+
+		err = bcrypt.CompareHashAndPassword([]byte(user.Pass), []byte(userBody.Password))
+		if err != nil {
+			log.Println(err)
+			http.Error(w, "Password is incorrect", http.StatusBadRequest)
+			return
+		}
+
+		w.Write([]byte("Success login"))
+		return
+	}
+	http.Error(w, "Username and Password required", http.StatusBadRequest)
 }
 
 // func main() {

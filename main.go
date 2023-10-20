@@ -55,6 +55,7 @@ func main() {
 	http.HandleFunc("/", statusOk)
 	http.HandleFunc("/ws", handleConnection)
 	http.HandleFunc("/reg", server.HandleRegister)
+	http.HandleFunc("/log", server.HandleLogin)
 
 	httpServer := &http.Server{
 		Addr:              *addr,
